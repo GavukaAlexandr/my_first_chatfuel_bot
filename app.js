@@ -1,7 +1,7 @@
-import express from "express";
-import bodyParser from "body-parser";
-import path from "path";
-import addApiRoutes from "./src/addApiRoutes";
+const express = require("express");
+const bodyParser = require("body-parser");
+const path = require("path");
+const addApiRoutes = require("./src/addApiRoutes");
 // import mongodbConnection from "./src/database/mongodb";
 
 const app = express();
