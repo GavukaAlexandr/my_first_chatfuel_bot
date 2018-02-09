@@ -1,10 +1,11 @@
 {
   "development": {
-    "username": "root",
-    "password": null,
+    "username": "firstCFBot",
+    "password": 1,
     "database": "first_cf_bot_dev",
-    "host": "127.0.0.1",
-    "dialect": "postgres"
+    "host": "172.17.0.1",
+    "dialect": "postgres",
+    "operatorsAliases": false
   },
   "test": {
     "username": "root",

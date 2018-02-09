@@ -1,5 +1,6 @@
 const axios = require('axios');
 const DFService = require('./dialogFlow.service');
+const { User, Order } = require('../database/models');
 
 //TODO: Cделай чтобы через ChatFuel шло сообщение и 
 // ты создавал сесию когда отправляешь месседж в DialogFlow
@@ -8,6 +9,9 @@ const DFService = require('./dialogFlow.service');
 // сделай юзеров и заказы. 
 // И создание заказа в мессенджере.
 //  Юзер должен указать название товара, цвет и размер.
+// добавить кнопку в persisted menu "Show my orders" для юзера
+// кешировать Orders на 1 минуту через редис
+// 
 class ChatfuelController {
     async handleOrderName(req, res, next) {
         const DFResponse = await DFService
@@ -26,8 +30,6 @@ class ChatfuelController {
         const DFResponse = await DFService
             .dialogFlowRequest(req.body.orderSize, req.body["messenger user id"]);
 
-        console.log(DFResponse);
-
         res.json({
             "messages": [
                 { "text": DFResponse.result.fulfillment.speech }
@@ -38,10 +40,36 @@ class ChatfuelController {
 
     async handleOrderColor(req, res, next) {
         // console.log(req.body);
+        const user = {
+            first_name: req.body["first name"],
+            last_name: req.body["last name"],
+            messenger_user_id: req.body["messenger user id"],
+        }
         const DFResponse = await DFService
             .dialogFlowRequest(req.body.orderColor, req.body["messenger user id"]);
 
-            //create DB
+        const order = {
+            name: DFResponse.result.contexts["0"].parameters.OrderName,
+            size: DFResponse.result.contexts["0"].parameters.OrderSize,
+            color: DFResponse.result.contexts["0"].parameters.OrderColor,
+        };
+
+        Order.create({
+            ...order,
+            UserId: user
+        }, {
+                include: [{
+                    model: User,
+                    as: 'userId'
+                }]
+            })
+            .then(() => {
+                console.log(SUCCESS);
+            })
+            .catch((e) => {
+                console.log(e);
+            });
+
 
         res.json({
             "messages": [
@@ -50,23 +78,6 @@ class ChatfuelController {
             "redirect_to_blocks": ["order is accepted"]
         });
     }
-
-    // broadcasting(req, res, next) {
-    //     axios.post('https://api.chatfuel.com/bots/5a799f7be4b01919b30e971e/users/2258584364159051/send?chatfuel_token=vnbqX6cpvXUXFcOKr5RHJ7psSpHDRzO1hXBY8dkvn50ZkZyWML3YdtoCnKH7FSjC&chatfuel_block_name=Default answer&<USER_ATTRIBUTE_1>=<VALUE_1>&<USER_ATTRIBUTE_2>=<VALUE_2>',
-    //         {
-    //             // firstName: 'Fred',
-    //             // lastName: 'Flintstone'
-    //         })
-    //         .then(function (response) {
-    //             console.log(response);
-    //             res.status(200).json(response.data);
-    //         })
-    //         .catch(function (error) {
-    //             console.log(error);
-    //             res.status(200).json(error);
-    //         });
-
-    // }
 }
 
 module.exports = new ChatfuelController();
