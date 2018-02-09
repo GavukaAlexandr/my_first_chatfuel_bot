@@ -1,28 +1,43 @@
 version: '3.4'
 services:
-  web:
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    volumes:
-           - ".:/home/www/messenger-task-scheduler-bot"
-    ports:
-      - "80:3000"
+  # web:
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #   volumes:
+  #          - ".:/home/www/messenger-task-scheduler-bot"
+  #   ports:
+  #     - "80:3000"
     # depends_on:
       # - mongo
     # restart: always
-  # mongo:
-  #   command: mongod
-  #   image: mongo:3-jessie
-    # ports:
-      # - "27100:27017" # map port to none standard port, to avoid conflicts with locally installed mongodb.
-
-    # Прив'язка VOLUME із MongoImage за допомогою
-    # docker-compose volumes до файлової системи хосту.
-    # https://docs.docker.com/compose/compose-file/#volumes
-    # https://docs.docker.com/engine/reference/builder/#volume
-    # https://docs.docker.com/engine/admin/volumes/volumes/
-    # volumes:
-    #   - ./../database/mongo/db:/data/db
-    #   - ./../database/mongo/configDb:/data/configdb
-    # restart: always
+  postgres:
+    image: postgres:10.2
+    environment:
+      POSTGRES_USER: firstCFBot
+      POSTGRES_PASSWORD: 1
+      POSTGRES_DB: first_cf_bot_dev
+      PGDATA: /data/postgres
+    volumes:
+       - /home/dev26/projects/postgresDataFirstCFBot:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - postgres
+    # restart: unless-stopped
+  
+  pgadmin:
+    links:
+      - postgres:postgres
+    image: fenglc/pgadmin4
+    volumes:
+       - /home/dev26/projects/pgadmin:/root/.pgadmin
+    ports:
+      - "5050:5050"
+    networks:
+      - postgres
+    # restart: unless-stopped
+    
+networks:
+  postgres:
+    driver: bridge
