@@ -109,14 +109,14 @@ async function handleShowOrders(req, res) {
     // TODO: get orders for user from req
     const userOrders = await User.findOne({
       where: {
-        id: req.body['messenger user id'],
+        messenger_user_id: req.body['messenger user id'],
       },
       include: [{
         model: Order,
       }],
     });
 
-    // console.log(userOrders);
+    console.log(userOrders);
   } catch (err) {
     console.log(err);
   }

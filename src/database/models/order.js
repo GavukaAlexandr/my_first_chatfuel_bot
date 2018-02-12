@@ -4,16 +4,14 @@ module.exports = (sequelize, DataTypes) => {
     size: DataTypes.STRING,
     color: DataTypes.STRING,
     userId: DataTypes.INTEGER
-  }, {
-    classMethods: {
-      associate(models) {
-        // associations can be defined here
-        Order.belongsTo(models.User, {
-          foreignKey: 'userId',
-          // onDelete: 'CASCADE',
-        });
-      }
-    }
   });
+
+  Order.associate = (models) => {
+    // associations can be defined here
+    Order.belongsTo(models.User, {
+      foreignKey: 'userId',
+      // onDelete: 'CASCADE',
+    });
+  };
   return Order;
 };
