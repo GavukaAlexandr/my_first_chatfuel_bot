@@ -1,4 +1,3 @@
-'use strict';
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     first_name: DataTypes.STRING,
@@ -6,16 +5,16 @@ module.exports = (sequelize, DataTypes) => {
     messenger_user_id: DataTypes.STRING,
     // order: DataTypes.INTEGER
   }, {
-      classMethods: {
-        associate: function (models) {
-          // associations can be defined here
-          // models.User.hasMany(models.Order);
-          User.hasMany(models.Order, {
-            foreignKey: 'UserId',
-            as: 'userId',
-          });
-        }
+    classMethods: {
+      associate(models) {
+        // associations can be defined here
+        // models.User.hasMany(models.Order);
+        User.hasMany(models.Order, {
+          foreignKey: 'userId',
+          // as: 'userId',
+        });
       }
-    });
+    }
+  });
   return User;
 };

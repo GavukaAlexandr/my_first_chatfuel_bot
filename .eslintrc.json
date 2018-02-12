@@ -1,0 +1,12 @@
+{
+    "extends": "airbnb-base",
+    "rules": {
+        "jsx-a11y/href-no-hash": "off",
+        "comma-dangle": "off",
+        "consistent-return": "off",
+        "no-console": "off",
+        "max-len": "off",
+        "prefer-destructuring": "off",
+        "no-underscore-dangle": 0
+    }
+}
