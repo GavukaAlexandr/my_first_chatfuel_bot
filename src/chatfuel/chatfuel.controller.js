@@ -1,6 +1,7 @@
 // const axios = require("axios");
 const DFService = require('./dialogFlow.service');
 const { User, Order } = require('../database/models');
+const { setexAsync } = require('./cache');
 
 // TODO: Cделай чтобы через ChatFuel шло сообщение и
 // ты создавал сесию когда отправляешь месседж в DialogFlow
@@ -98,54 +99,45 @@ async function handleOrderColor(req, res) {
 }
 
 async function renderOrderList(orders) {
-  return orders.map(order => ({
+  const result = orders.map(order => ({
     title: order.name,
-    subtitle: `size ${order.size}, color ${order.color}`,
+    subtitle: `size: ${order.size}, color: ${order.color}`,
   }));
+
+  return result;
 }
 
 async function handleShowOrders(req, res) {
   try {
-    // TODO: get orders for user from req
     const userOrders = await User.findOne({
       where: {
-        messenger_user_id: req.body['messenger user id'],
+        messenger_user_id: req.query['messenger user id'],
       },
       include: [{
         model: Order,
       }],
     });
 
-    console.log(userOrders);
+    const resronseList = {
+      messages: [
+        {
+          attachment: {
+            type: 'template',
+            payload: {
+              template_type: 'list',
+              top_element_style: 'compact',
+              elements: await renderOrderList(userOrders.get({ plain: true }).Orders),
+            }
+          }
+        }
+      ]
+    };
+
+    setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseList));
+    res.json(resronseList);
   } catch (err) {
     console.log(err);
   }
-
-  // try {
-  //   const orders = await Order.findAll({
-  //     where: {
-  //       // messenger_user_id: req.body['messenger user id']
-  //       messenger_user_id: req.body['messenger user id']
-  //     }
-  //   });
-
-  //   res.json({
-  //     messages: [
-  //       {
-  //         attachment: {
-  //           type: 'template',
-  //           payload: {
-  //             template_type: 'list',
-  //             top_element_style: 'large',
-  //             elements: await renderOrderList(orders),
-  //           }
-  //         }
-  //       }
-  //     ]
-  //   });
-  // } catch (err) {
-  //   console.log(err);
-  // }
 }
 
 module.exports = {
