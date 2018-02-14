@@ -1,18 +1,18 @@
-// const axios = require("axios");
 const DFService = require('./dialogFlow.service');
-const { User, Order } = require('../database/models');
+const {
+  createUser,
+  getUserByMessengerId,
+  getUserOrdersByUserId,
+  createOrder,
+  deleteOrderById,
+} = require('./dbQueries');
+const {
+  messageWithRedirectToBlock,
+  renderList,
+  renderGallery,
+} = require('./jsonApiComponents');
 const { setexAsync } = require('./cache');
 
-// TODO: Cделай чтобы через ChatFuel шло сообщение и
-// ты создавал сесию когда отправляешь месседж в DialogFlow
-// и в ответе получаешь context и inten
-// TODO: Теперь подыми базу и
-// сделай юзеров и заказы.
-// И создание заказа в мессенджере.
-//  Юзер должен указать название товара, цвет и размер.
-// добавить кнопку в persisted menu "Show my orders" для юзера
-// кешировать Orders на 1 минуту через редис
-//
 async function handleOrderName(req, res) {
   const DFResponse = await DFService.dialogFlowRequest(
     req.body.orderName,
@@ -23,126 +23,92 @@ async function handleOrderName(req, res) {
     last_name: req.body['last name'],
     messenger_user_id: req.body['messenger user id']
   };
-  try {
-    const user = await User.findOne({
-      where: {
-        messenger_user_id: userFromReq.messenger_user_id
-      }
-    });
-    if (!user) {
-      try {
-        User.create({
-          ...userFromReq
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    }
-  } catch (err) {
-    console.log(err);
+  const user = await getUserByMessengerId(req.body['messenger user id']);
+  if (!user) {
+    createUser(userFromReq);
   }
-  res.json({
-    messages: [{ text: DFResponse.result.fulfillment.speech }],
-    redirect_to_blocks: ['get order size']
-  });
+
+  res.json(messageWithRedirectToBlock(
+    DFResponse.result.fulfillment.speech,
+    ['get order size']
+  ));
 }
 
 async function handleOrderSize(req, res) {
-  // console.log(req.body);
   const DFResponse = await DFService.dialogFlowRequest(
     req.body.orderSize,
     req.body['messenger user id']
   );
 
-  res.json({
-    messages: [{ text: DFResponse.result.fulfillment.speech }],
-    redirect_to_blocks: ['get order color']
-  });
+  res.json(messageWithRedirectToBlock(
+    DFResponse.result.fulfillment.speech,
+    ['get order color']
+  ));
 }
 
 async function handleOrderColor(req, res) {
-  // console.log(req.body);
   try {
-    const user = await User.findOne({
-      where: {
-        messenger_user_id: req.body['messenger user id']
-      }
-    });
-
     const DFResponse = await DFService.dialogFlowRequest(
       req.body.orderColor,
       req.body['messenger user id']
     );
 
-    const order = {
-      name: DFResponse.result.contexts['0'].parameters.OrderName,
-      size: DFResponse.result.contexts['0'].parameters.OrderSize,
-      color: DFResponse.result.contexts['0'].parameters.OrderColor,
-      userId: user.id
-    };
-
-    console.log('>>>>>>>>>>>USER_ID');
-    console.log(order.userId);
-
-    try {
-      await Order.create(order);
-    } catch (err) {
-      console.log(err);
-    }
-    res.json({
-      messages: [{ text: DFResponse.result.fulfillment.speech }],
-      redirect_to_blocks: ['order is accepted']
-    });
+    res.json(messageWithRedirectToBlock(
+      DFResponse.result.fulfillment.speech,
+      ['get order img url']
+    ));
   } catch (err) {
     console.log(err);
   }
 }
 
-async function renderOrderList(orders) {
-  const result = orders.map(order => ({
-    title: order.name,
-    subtitle: `size: ${order.size}, color: ${order.color}`,
-  }));
+async function handleOrderImgUrl(req, res) {
+  const DFResponse = await DFService.dialogFlowRequest(
+    req.body.orderImgUrl,
+    req.body['messenger user id'],
+  );
 
-  return result;
+  await createOrder(DFResponse);
+
+  res.json(messageWithRedirectToBlock(
+    DFResponse.result.fulfillment.speech,
+    ['order is accepted']
+  ));
 }
 
-async function handleShowOrders(req, res) {
-  try {
-    const userOrders = await User.findOne({
-      where: {
-        messenger_user_id: req.query['messenger user id'],
-      },
-      include: [{
-        model: Order,
-      }],
-    });
+async function handleShowOrdersGallery(req, res) {
+  const userOrders = await getUserOrdersByUserId(req.query['messenger user id']);
 
-    const resronseList = {
-      messages: [
-        {
-          attachment: {
-            type: 'template',
-            payload: {
-              template_type: 'list',
-              top_element_style: 'compact',
-              elements: await renderOrderList(userOrders.get({ plain: true }).Orders),
-            }
-          }
-        }
-      ]
-    };
+  const resronseGallery = await renderGallery(userOrders);
 
-    setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseList));
-    res.json(resronseList);
-  } catch (err) {
-    console.log(err);
-  }
+  setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseGallery));
+  res.json(resronseGallery);
+}
+
+async function handleShowOrdersList(req, res) {
+  const userOrders = await getUserOrdersByUserId(req.query['messenger user id']);
+
+  const resronseList = await renderList(userOrders);
+
+  setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseList));
+  res.json(resronseList);
+}
+
+async function handleDeleteOrder(req, res) {
+  const orderId = req.params.id;
+  await deleteOrderById(orderId);
+
+  res.json({
+    messages: [{ text: `order by id:${orderId}  deleted` }],
+  });
 }
 
 module.exports = {
   handleOrderName,
   handleOrderSize,
   handleOrderColor,
-  handleShowOrders,
+  handleOrderImgUrl,
+  handleShowOrdersList,
+  handleShowOrdersGallery,
+  handleDeleteOrder,
 };

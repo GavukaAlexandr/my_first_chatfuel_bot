@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     size: DataTypes.STRING,
     color: DataTypes.STRING,
-    userId: DataTypes.INTEGER
+    imgUrl: DataTypes.STRING,
+    userId: DataTypes.INTEGER,
   });
 
   Order.associate = (models) => {
