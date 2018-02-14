@@ -1,4 +1,4 @@
-const DFService = require('./dialogFlow.service');
+const { dialogFlowRequest } = require('./dialogFlow.service');
 const {
   createUser,
   getUserByMessengerId,
@@ -14,33 +14,33 @@ const {
 const { setexAsync } = require('./cache');
 
 async function handleOrderName(req, res) {
-  const DFResponse = await DFService.dialogFlowRequest(
+  const DFResponse = await dialogFlowRequest(
     req.body.orderName,
     req.body['messenger user id']
   );
-  const userFromReq = {
-    first_name: req.body['first name'],
-    last_name: req.body['last name'],
-    messenger_user_id: req.body['messenger user id']
-  };
   const user = await getUserByMessengerId(req.body['messenger user id']);
   if (!user) {
+    const userFromReq = {
+      first_name: req.body['first name'],
+      last_name: req.body['last name'],
+      messenger_user_id: req.body['messenger user id']
+    };
     createUser(userFromReq);
   }
 
-  res.json(messageWithRedirectToBlock(
+  res.json(await messageWithRedirectToBlock(
     DFResponse.result.fulfillment.speech,
     ['get order size']
   ));
 }
 
 async function handleOrderSize(req, res) {
-  const DFResponse = await DFService.dialogFlowRequest(
+  const DFResponse = await dialogFlowRequest(
     req.body.orderSize,
     req.body['messenger user id']
   );
 
-  res.json(messageWithRedirectToBlock(
+  res.json(await messageWithRedirectToBlock(
     DFResponse.result.fulfillment.speech,
     ['get order color']
   ));
@@ -48,12 +48,12 @@ async function handleOrderSize(req, res) {
 
 async function handleOrderColor(req, res) {
   try {
-    const DFResponse = await DFService.dialogFlowRequest(
+    const DFResponse = await dialogFlowRequest(
       req.body.orderColor,
       req.body['messenger user id']
     );
 
-    res.json(messageWithRedirectToBlock(
+    res.json(await messageWithRedirectToBlock(
       DFResponse.result.fulfillment.speech,
       ['get order img url']
     ));
@@ -63,14 +63,14 @@ async function handleOrderColor(req, res) {
 }
 
 async function handleOrderImgUrl(req, res) {
-  const DFResponse = await DFService.dialogFlowRequest(
+  const DFResponse = await dialogFlowRequest(
     req.body.orderImgUrl,
     req.body['messenger user id'],
   );
 
   await createOrder(DFResponse);
 
-  res.json(messageWithRedirectToBlock(
+  res.json(await messageWithRedirectToBlock(
     DFResponse.result.fulfillment.speech,
     ['order is accepted']
   ));
@@ -81,7 +81,7 @@ async function handleShowOrdersGallery(req, res) {
 
   const resronseGallery = await renderGallery(userOrders);
 
-  setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseGallery));
+  setexAsync(`${req.path}_${req.query['messenger user id']}`, 60, JSON.stringify(resronseGallery));
   res.json(resronseGallery);
 }
 
@@ -90,7 +90,7 @@ async function handleShowOrdersList(req, res) {
 
   const resronseList = await renderList(userOrders);
 
-  setexAsync(`${req.path}_${req.query['messenger user id']}`, 3600, JSON.stringify(resronseList));
+  setexAsync(`${req.path}_${req.query['messenger user id']}`, 60, JSON.stringify(resronseList));
   res.json(resronseList);
 }
 
